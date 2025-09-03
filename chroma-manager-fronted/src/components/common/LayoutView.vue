@@ -166,7 +166,7 @@ export default {
         this.updating = true
         
         await tenantAPI.updateTenant(this.currentUser.tenant, {
-          name: this.tenantForm.newTenantName
+          resource_name: this.tenantForm.newTenantName
         })
         
         const updatedUser = {
