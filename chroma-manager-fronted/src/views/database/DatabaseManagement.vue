@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="database-management">
     <!-- 操作栏 -->
     <div class="operation-bar">
@@ -22,17 +22,26 @@
       <el-table :data="databases" v-loading="loading" stripe>
         <el-table-column prop="id" label="ID" width="300">
           <template slot-scope="scope">
-            <el-tag type="info">{{ scope.row.id }}</el-tag>
+            <div class="cell-with-copy">
+              <el-tag type="info">{{ scope.row.id }}</el-tag>
+              <copy-button :text="scope.row.id"></copy-button>
+            </div>
           </template>
         </el-table-column>
         <el-table-column prop="name" label="数据库名称" min-width="200">
           <template slot-scope="scope">
-            <el-tag type="primary">{{ scope.row.name }}</el-tag>
+            <div class="cell-with-copy">
+              <el-tag type="primary">{{ scope.row.name }}</el-tag>
+              <copy-button :text="scope.row.name"></copy-button>
+            </div>
           </template>
         </el-table-column>
         <el-table-column prop="tenant" label="所属租户" min-width="150">
           <template slot-scope="scope">
-            <el-tag type="success">{{ scope.row.tenant }}</el-tag>
+            <div class="cell-with-copy">
+              <el-tag type="success">{{ scope.row.tenant }}</el-tag>
+              <copy-button :text="scope.row.tenant"></copy-button>
+            </div>
           </template>
         </el-table-column>
         <el-table-column label="操作" width="250">
@@ -66,13 +75,22 @@
       <div v-if="selectedDatabase" class="database-detail">
         <el-descriptions :column="2" border>
           <el-descriptions-item label="数据库ID">
-            <el-tag type="info">{{ selectedDatabase.id }}</el-tag>
+            <div class="cell-with-copy">
+              <el-tag type="info">{{ selectedDatabase.id }}</el-tag>
+              <copy-button :text="selectedDatabase.id"></copy-button>
+            </div>
           </el-descriptions-item>
           <el-descriptions-item label="数据库名称">
-            <el-tag type="primary">{{ selectedDatabase.name }}</el-tag>
+            <div class="cell-with-copy">
+              <el-tag type="primary">{{ selectedDatabase.name }}</el-tag>
+              <copy-button :text="selectedDatabase.name"></copy-button>
+            </div>
           </el-descriptions-item>
           <el-descriptions-item label="所属租户">
-            <el-tag type="success">{{ selectedDatabase.tenant }}</el-tag>
+            <div class="cell-with-copy">
+              <el-tag type="success">{{ selectedDatabase.tenant }}</el-tag>
+              <copy-button :text="selectedDatabase.tenant"></copy-button>
+            </div>
           </el-descriptions-item>
         </el-descriptions>
         
@@ -90,9 +108,13 @@
 <script>
 import { databaseAPI } from '@/services/api'
 import { mapGetters } from 'vuex'
+import CopyButton from '@/components/common/CopyButton.vue'
 
 export default {
   name: 'DatabaseManagement',
+  components: {
+    CopyButton
+  },
   data() {
     return {
       databases: [],
@@ -231,5 +253,10 @@ export default {
 
 .dialog-footer {
   text-align: right;
+}
+
+.cell-with-copy {
+  display: flex;
+  align-items: center;
 }
 </style>

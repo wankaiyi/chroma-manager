@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="data-management">
     <el-card class="selector-card" style="margin-bottom: 20px;">
       <div slot="header">
@@ -52,18 +52,27 @@
       <el-table :data="records" v-loading="loading" stripe>
         <el-table-column prop="id" label="记录ID" width="200">
           <template slot-scope="scope">
-            <el-tag type="info">{{ scope.row.id }}</el-tag>
+            <div class="cell-with-copy">
+              <el-tag type="info">{{ scope.row.id }}</el-tag>
+              <copy-button :text="scope.row.id"></copy-button>
+            </div>
           </template>
         </el-table-column>
         <el-table-column prop="document" label="文档内容" min-width="300">
           <template slot-scope="scope">
-            <span v-if="scope.row.document">{{ scope.row.document }}</span>
+            <div class="cell-with-copy" v-if="scope.row.document">
+              <span>{{ scope.row.document }}</span>
+              <copy-button :text="scope.row.document"></copy-button>
+            </div>
             <span v-else class="no-content">无</span>
           </template>
         </el-table-column>
         <el-table-column prop="metadata" label="元数据" min-width="200">
           <template slot-scope="scope">
-            <el-tag v-if="scope.row.metadata" type="success">{{ JSON.stringify(scope.row.metadata) }}</el-tag>
+            <div class="cell-with-copy" v-if="scope.row.metadata">
+              <el-tag type="success">{{ JSON.stringify(scope.row.metadata) }}</el-tag>
+              <copy-button :text="JSON.stringify(scope.row.metadata)"></copy-button>
+            </div>
             <span v-else class="no-content">无</span>
           </template>
         </el-table-column>
@@ -82,6 +91,7 @@
                   </span>
                 </div>
               </el-tooltip>
+              <copy-button :text="scope.row.embedding"></copy-button>
             </div>
             <span v-else class="no-content">无</span>
           </template>
@@ -154,8 +164,12 @@
 <script>
 import { dataAPI, collectionAPI, databaseAPI } from '@/services/api'
 import { mapGetters } from 'vuex'
+import CopyButton from '@/components/common/CopyButton.vue'
 
 export default {
+  components: {
+    CopyButton
+  },
   name: 'DataManagement',
   data() {
     return {
@@ -350,6 +364,13 @@ export default {
       }
     },
     
+    formatEmbeddingForCopy(embedding) {
+      if (!embedding || !Array.isArray(embedding)) {
+        return ''
+      }
+      return JSON.stringify(embedding)
+    },
+    
     async getRecordCount() {
       if (!this.currentTenant || !this.selectedDatabase || !this.selectedCollection) return
       
@@ -522,6 +543,12 @@ export default {
   font-size: 12px;
   color: #606266;
   font-weight: 500;
+}
+
+.cell-with-copy {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .pagination-container {

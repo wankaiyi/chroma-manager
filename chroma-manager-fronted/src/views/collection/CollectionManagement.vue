@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="collection-management">
     <el-card class="selector-card" style="margin-bottom: 20px;">
       <div slot="header">
@@ -34,18 +34,27 @@
       <el-table :data="collections" v-loading="loading" stripe>
         <el-table-column prop="id" label="集合ID" width="300">
           <template slot-scope="scope">
-            <el-tag type="info">{{ scope.row.id }}</el-tag>
+            <div class="cell-with-copy">
+              <el-tag type="info">{{ scope.row.id }}</el-tag>
+              <copy-button :text="scope.row.id"></copy-button>
+            </div>
           </template>
         </el-table-column>
         <el-table-column prop="name" label="集合名称" min-width="200">
           <template slot-scope="scope">
-            <el-tag type="primary">{{ scope.row.name }}</el-tag>
+            <div class="cell-with-copy">
+              <el-tag type="primary">{{ scope.row.name }}</el-tag>
+              <copy-button :text="scope.row.name"></copy-button>
+            </div>
           </template>
         </el-table-column>
         <el-table-column prop="metadata" label="元数据" min-width="200">
           <template slot-scope="scope">
-            <el-tag v-if="scope.row.metadata" type="success">{{ JSON.stringify(scope.row.metadata) }}</el-tag>
-            <span v-else class="no-content">无</span>
+            <div class="cell-with-copy">
+              <el-tag v-if="scope.row.metadata" type="success">{{ JSON.stringify(scope.row.metadata) }}</el-tag>
+              <copy-button v-if="scope.row.metadata" :text="JSON.stringify(scope.row.metadata)"></copy-button>
+              <span v-else class="no-content">无</span>
+            </div>
           </template>
         </el-table-column>
         <el-table-column label="操作" width="120">
@@ -167,10 +176,16 @@
       <div v-if="selectedCollection" class="collection-detail">
         <el-descriptions :column="2" border>
           <el-descriptions-item label="集合ID">
-            <el-tag type="info">{{ selectedCollection.id }}</el-tag>
+            <div class="cell-with-copy">
+              <el-tag type="info">{{ selectedCollection.id }}</el-tag>
+              <copy-button :text="selectedCollection.id"></copy-button>
+            </div>
           </el-descriptions-item>
           <el-descriptions-item label="集合名称">
-            <el-tag type="primary">{{ selectedCollection.name }}</el-tag>
+            <div class="cell-with-copy">
+              <el-tag type="primary">{{ selectedCollection.name }}</el-tag>
+              <copy-button :text="selectedCollection.name"></copy-button>
+            </div>
           </el-descriptions-item>
           <el-descriptions-item label="租户">
             {{ currentTenant }}
@@ -179,7 +194,10 @@
             {{ selectedDatabase }}
           </el-descriptions-item>
           <el-descriptions-item label="元数据" span="2">
-            <pre v-if="selectedCollection.metadata">{{ JSON.stringify(selectedCollection.metadata, null, 2) }}</pre>
+            <div class="cell-with-copy" v-if="selectedCollection.metadata">
+              <pre>{{ JSON.stringify(selectedCollection.metadata, null, 2) }}</pre>
+              <copy-button :text="JSON.stringify(selectedCollection.metadata, null, 2)"></copy-button>
+            </div>
             <span v-else class="no-metadata">无</span>
           </el-descriptions-item>
         </el-descriptions>
@@ -198,8 +216,12 @@
 <script>
 import { collectionAPI, databaseAPI, dataAPI } from '@/services/api'
 import { mapGetters } from 'vuex'
+import CopyButton from '@/components/common/CopyButton.vue'
 
 export default {
+  components: {
+    CopyButton
+  },
   name: 'CollectionManagement',
   data() {
     return {
@@ -533,6 +555,11 @@ export default {
 .collection-count {
   color: #909399;
   font-size: 14px;
+}
+
+.cell-with-copy {
+  display: flex;
+  align-items: center;
 }
 
 .no-content {
