@@ -63,6 +63,10 @@
                   <i class="el-icon-edit"></i>
                   编辑集合
                 </el-dropdown-item>
+                <el-dropdown-item command="fork">
+                  <i class="el-icon-copy-document"></i>
+                  复制集合
+                </el-dropdown-item>
                 <el-dropdown-item command="delete" divided>
                   <i class="el-icon-delete"></i>
                   删除集合
@@ -80,9 +84,9 @@
           <el-input v-model="createForm.name" placeholder="请输入集合名称"></el-input>
         </el-form-item>
         <el-form-item label="元数据">
-          <el-input 
-            v-model="createForm.metadata" 
-            type="textarea" 
+          <el-input
+            v-model="createForm.metadata"
+            type="textarea"
             :rows="3"
             placeholder="请输入JSON格式元数据（可选）">
           </el-input>
@@ -106,9 +110,9 @@
           <el-input v-model="editForm.new_name" placeholder="请输入新的集合名称"></el-input>
         </el-form-item>
         <el-form-item label="新元数据">
-          <el-input 
-            v-model="editForm.new_metadata" 
-            type="textarea" 
+          <el-input
+            v-model="editForm.new_metadata"
+            type="textarea"
             :rows="3"
             placeholder="请输入新的JSON格式元数据">
           </el-input>
@@ -117,6 +121,45 @@
       <div slot="footer" class="dialog-footer">
         <el-button @click="showEditDialog = false">取消</el-button>
         <el-button type="primary" @click="updateCollection" :loading="updating">确定</el-button>
+      </div>
+    </el-dialog>
+
+    <el-dialog title="复制集合" :visible.sync="showForkDialog" width="500px">
+      <el-form :model="forkForm" :rules="forkRules" ref="forkForm" label-width="120px">
+        <el-form-item label="原集合">
+          <el-input v-model="forkForm.sourceCollection" disabled></el-input>
+        </el-form-item>
+        <el-form-item label="新集合名称" prop="new_name">
+          <el-input v-model="forkForm.new_name" placeholder="请输入新集合名称"></el-input>
+        </el-form-item>
+        <el-form-item label="目标数据库" prop="target_database">
+          <el-select v-model="forkForm.target_database" placeholder="请选择目标数据库" style="width: 100%;">
+            <el-option
+              v-for="database in databases"
+              :key="database.name"
+              :label="database.name"
+              :value="database.name">
+            </el-option>
+          </el-select>
+        </el-form-item>
+        <el-form-item label="元数据">
+          <el-input
+            v-model="forkForm.metadata"
+            type="textarea"
+            :rows="3"
+            placeholder="请输入JSON格式元数据（可选）">
+          </el-input>
+        </el-form-item>
+        <div class="custom-notice">
+          <div class="custom-notice-content">
+            <i class="el-icon-info"></i>
+            <strong>注意：collection fork现在可供所有 Chroma Cloud 用户和 Chroma Distributed 的开源用户使用</strong>
+          </div>
+        </div>
+      </el-form>
+      <div slot="footer" class="dialog-footer">
+        <el-button @click="showForkDialog = false">取消</el-button>
+        <el-button type="primary" @click="forkCollection" :loading="forking">确定</el-button>
       </div>
     </el-dialog>
 
@@ -140,7 +183,7 @@
             <span v-else class="no-metadata">无</span>
           </el-descriptions-item>
         </el-descriptions>
-        
+
         <div class="collection-actions" style="margin-top: 20px;">
           <el-button type="primary" @click="viewData(selectedCollection)">
             <i class="el-icon-document"></i>
@@ -153,7 +196,7 @@
 </template>
 
 <script>
-import { collectionAPI, databaseAPI } from '@/services/api'
+import { collectionAPI, databaseAPI, dataAPI } from '@/services/api'
 import { mapGetters } from 'vuex'
 
 export default {
@@ -166,8 +209,10 @@ export default {
       loading: false,
       creating: false,
       updating: false,
+      forking: false,
       showCreateDialog: false,
       showEditDialog: false,
+      showForkDialog: false,
       showDetailDialog: false,
       selectedCollection: null,
       createForm: {
@@ -180,6 +225,12 @@ export default {
         new_name: '',
         new_metadata: ''
       },
+      forkForm: {
+        sourceCollection: '',
+        new_name: '',
+        target_database: '',
+        metadata: ''
+      },
       createRules: {
         name: [
           { required: true, message: '请输入集合名称', trigger: 'blur' },
@@ -189,6 +240,15 @@ export default {
       editRules: {
         new_name: [
           { min: 1, max: 50, message: '长度在 1 到 50 个字符', trigger: 'blur' }
+        ]
+      },
+      forkRules: {
+        new_name: [
+          { required: true, message: '请输入新集合名称', trigger: 'blur' },
+          { min: 1, max: 50, message: '长度在 1 到 50 个字符', trigger: 'blur' }
+        ],
+        target_database: [
+          { required: true, message: '请选择目标数据库', trigger: 'change' }
         ]
       }
     }
@@ -215,12 +275,15 @@ export default {
         case 'edit':
           this.editCollection(collection)
           break
+        case 'fork':
+          this.forkCollectionDialog(collection)
+          break
         case 'delete':
           this.deleteCollection(collection)
           break
       }
     },
-    
+
     saveState() {
       const state = {
         selectedDatabase: this.selectedDatabase,
@@ -228,7 +291,7 @@ export default {
       }
       localStorage.setItem('collection-management-state', JSON.stringify(state))
     },
-    
+
     restoreState() {
       try {
         const savedState = localStorage.getItem('collection-management-state')
@@ -236,7 +299,7 @@ export default {
           const state = JSON.parse(savedState)
           this.selectedDatabase = state.selectedDatabase || ''
           this.collections = state.collections || []
-          
+
           if (this.selectedDatabase) {
             this.loadCollections()
           }
@@ -245,13 +308,13 @@ export default {
         console.error('恢复集合管理页面状态失败:', error)
       }
     },
-    
+
     async loadDatabases() {
       if (!this.currentTenant) {
         this.$message.error('未获取到租户信息')
         return
       }
-      
+
       try {
         const response = await databaseAPI.listDatabases(this.currentTenant)
         this.databases = response.data || []
@@ -259,7 +322,7 @@ export default {
         this.$message.error('加载数据库列表失败')
       }
     },
-    
+
     onDatabaseChange() {
       this.collections = []
       this.saveState()
@@ -267,10 +330,10 @@ export default {
         this.loadCollections()
       }
     },
-    
+
     async loadCollections() {
       if (!this.currentTenant || !this.selectedDatabase) return
-      
+
       try {
         this.loading = true
         const response = await collectionAPI.listCollections(this.currentTenant, this.selectedDatabase)
@@ -282,17 +345,17 @@ export default {
         this.loading = false
       }
     },
-    
+
     async createCollection() {
       try {
         await this.$refs.createForm.validate()
         this.creating = true
-        
+
         const data = {
           name: this.createForm.name,
           get_or_create: this.createForm.get_or_create
         }
-        
+
         if (this.createForm.metadata) {
           try {
             data.metadata = JSON.parse(this.createForm.metadata)
@@ -301,7 +364,7 @@ export default {
             return
           }
         }
-        
+
         await collectionAPI.createCollection(this.currentTenant, this.selectedDatabase, data)
         this.$message.success('集合创建成功')
         this.showCreateDialog = false
@@ -315,7 +378,7 @@ export default {
         this.creating = false
       }
     },
-    
+
     editCollection(collection) {
       this.editForm = {
         id: collection.id,
@@ -324,18 +387,18 @@ export default {
       }
       this.showEditDialog = true
     },
-    
+
     async updateCollection() {
       try {
         await this.$refs.editForm.validate()
         this.updating = true
-        
+
         const data = {}
-        
+
         if (this.editForm.new_name) {
           data.new_name = this.editForm.new_name
         }
-        
+
         if (this.editForm.new_metadata) {
           try {
             data.new_metadata = JSON.parse(this.editForm.new_metadata)
@@ -344,7 +407,7 @@ export default {
             return
           }
         }
-        
+
         await collectionAPI.updateCollection(this.currentTenant, this.selectedDatabase, this.editForm.id, data)
         this.$message.success('集合更新成功')
         this.showEditDialog = false
@@ -357,13 +420,62 @@ export default {
         this.updating = false
       }
     },
-    
+
+    forkCollectionDialog(collection) {
+      this.forkForm = {
+        sourceCollection: collection.name,
+        new_name: collection.name + "_fork",
+        target_database: this.selectedDatabase,
+        metadata: collection.metadata ? JSON.stringify(collection.metadata, null, 2) : ''
+      }
+      this.showForkDialog = true
+    },
+
+    async forkCollection() {
+      try {
+        await this.$refs.forkForm.validate()
+        this.forking = true
+
+        const data = {
+          new_name: this.forkForm.new_name
+        }
+
+        if (this.forkForm.metadata) {
+          try {
+            data.metadata = JSON.parse(this.forkForm.metadata)
+          } catch (error) {
+            this.$message.error('元数据格式错误，请输入有效的JSON')
+            return
+          }
+        }
+
+        // 找到源集合的ID
+        const sourceCollection = this.collections.find(c => c.name === this.forkForm.sourceCollection)
+        if (!sourceCollection) {
+          this.$message.error('找不到源集合')
+          return
+        }
+
+        await dataAPI.forkCollection(this.currentTenant, this.selectedDatabase, sourceCollection.id, data)
+        this.$message.success('集合复制成功')
+        this.showForkDialog = false
+        this.loadCollections()
+      } catch (error) {
+        console.error(error)
+        if (error !== false) {
+          this.$message.error('集合复制失败')
+        }
+      } finally {
+        this.forking = false
+      }
+    },
+
     async deleteCollection(collection) {
       try {
         await this.$confirm(`确定要删除集合 "${collection.name}" 吗？`, '确认删除', {
           type: 'warning'
         })
-        
+
         await collectionAPI.deleteCollection(this.currentTenant, this.selectedDatabase, collection.id)
         this.$message.success('集合删除成功')
         this.loadCollections()
@@ -373,12 +485,12 @@ export default {
         }
       }
     },
-    
+
     viewDetail(collection) {
       this.selectedCollection = collection
       this.showDetailDialog = true
     },
-    
+
     viewData(collection) {
       this.showDetailDialog = false
       this.$router.push({

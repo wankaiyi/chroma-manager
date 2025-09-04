@@ -30,7 +30,7 @@ echo.
 
 echo [1/2] 启动chroma-manager-backend后端服务...
 cd /d "%SPRING_BOOT_PATH%"
-start "Spring Boot Server" cmd /k "echo Starting Spring Boot on port %BACKEND_PORT%... && mvn spring-boot:run -Dspring-boot.run.arguments="--server.port=%BACKEND_PORT%"
+start /b "Spring Boot Server" cmd /k "echo Starting Spring Boot on port %BACKEND_PORT%... && mvn spring-boot:run -Dspring-boot.run.arguments="--server.port=%BACKEND_PORT%"
 
 timeout /t 3 /nobreak > nul
 
@@ -41,7 +41,7 @@ cd /d "..\%VUE_PATH%"
 echo VUE_APP_CHROMA_API_URL=http://localhost:%BACKEND_PORT%
 echo VUE_APP_TITLE=ChromaDB Manager
 ) > .env
-start "Vue Dev Server" cmd /k "echo Starting Vue on port %FRONTED_PORT%... && npm i && npm run serve -- --port %FRONTED_PORT%"
+start /b "Vue Dev Server" cmd /k "echo Starting Vue on port %FRONTED_PORT%... && npm i && npm run serve -- --port %FRONTED_PORT%"
 
 echo.
 echo ========================================
